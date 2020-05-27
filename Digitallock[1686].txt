@@ -1,0 +1,404 @@
+ORG 2000H
+LXI SP,3000H				;stackpointer point to 3000h
+MVI A, 10000010B			;port a=output	port b=input port c=output
+OUT 83H					;out ctrlport
+MVI A, 00H                        	;clear port a
+OUT 80H
+MVI H,00H				;clear h register
+
+PASSWORD_INPUT:
+LOOP5:
+MVI A,00000000B				
+OUT 80H					;turn off all led 
+IN 81H
+ANI 10000000B				;check set_up_password button 
+JZ START				;skip check 
+IN 81H
+ANI 00100000B				;check lock is currently unlocking or locking 
+JNZ PASSWORD_SET_UP			;2 situation fulfill then jump to PASSWORD_SET_UP mode
+START:	
+IN 81H					;read keypad input
+MOV B,A					;temporary store input password to B 
+ANI 00010000B				;check data available signal  
+JZ LOOP5				;jump back to initial loop if no signal 
+BUFFER5:				
+CALL NUM_0				;use to display number input on 7 segment display
+IN 81H					
+ANI 00010000B				;wait for key release
+JNZ BUFFER5
+CALL OFF7SEGMENT			;turn off 7 segment display
+MVI A,01000000B
+OUT 80H					;1st yellow led light up
+LOOP6:
+MVI A,01000000B					
+OUT 80H					;to makesure true led is lighting up when backspacing
+IN 81H 
+ANI 01000000B				;check backspace button					
+JZ CONTINUE				;skip if no signal
+DELAY:
+IN 81H 
+ANI 01000000B				;wait for backspace button release
+JNZ DELAY
+JZ LOOP5				;jump back to previous loop
+CONTINUE:
+IN 81H
+MOV C,A
+ANI 00010000B
+JZ LOOP6
+CALL BUFFER6				;wait for input key release
+CALL OFF7SEGMENT			;off 7 segment after input key is released
+MVI A, 01100000B			;1st and second led light up
+OUT 80H
+LOOP7:
+MVI A, 01100000B
+OUT 80H
+IN 81H 
+ANI 01000000B
+JZ CONTINUE1
+DELAY1:
+IN 81H 
+ANI 01000000B
+JNZ DELAY1
+JZ LOOP6
+CONTINUE1:
+IN 81H
+MOV D,A
+ANI 00010000B
+JZ LOOP7
+CALL BUFFER7
+CALL OFF7SEGMENT
+MVI A, 01110000B
+OUT 80H
+LOOP8:
+MVI A, 01110000B
+OUT 80H
+IN 81H 
+ANI 01000000B
+JZ CONTINUE2
+DELAY2:
+IN 81H 
+ANI 01000000B
+JNZ DELAY2
+JZ LOOP7
+CONTINUE2:
+IN 81H
+MOV E,A
+ANI 00010000B
+JZ LOOP8
+IN 81H
+BUFFER8:
+CALL NUM_0
+IN 81H
+ANI 00010000B
+JNZ BUFFER8
+CALL OFF7SEGMENT
+MVI A, 01111000B
+OUT 80H
+BACKSPACE:					;special loop for last digit backspacing
+IN 81H 
+ANI 01000000B
+JZ CONTINUE3
+DELAY3:
+IN 81H 
+ANI 01000000B
+JNZ DELAY3
+JZ LOOP8
+CONTINUE3:					;ending loop
+IN 81H
+ANI 00011111B					;limit cpi from pb0-pb4 as pb5-pb7 is being shared with other input				
+CPI 00011110B					;cpi with enter code
+JZ PREVENT_OVERLAP_2				;jump to specific loop to wait for enter key release
+JNZ BACKSPACE					;jump back if situation not being fulfill
+
+PASSWORD_SET_UP:
+LOOP1:
+MVI A,00000001B
+OUT 80H
+IN 81H
+ANI 10000000B
+JNZ LOOP1
+EXTRA_LOOP:					;used to decrease the delay when system running loop
+IN 81H
+ANI 10000000B					;check password set up button to cancel setup process
+JNZ PREVENT_OVERLAP				;if signal is detected, jump to specific loop to wait for key release
+IN 81H
+STA 2001H					;stored password input 
+ANI 00010000B					;check data avaiable signal
+JZ EXTRA_LOOP					;if no signal jump back labeled loop
+BUFFER1:
+CALL NUM_0
+IN 81H
+ANI 00010000B
+JNZ BUFFER1
+CALL OFF7SEGMENT
+MVI A,01000001B
+OUT 80H
+LOOP2:
+IN 81H
+ANI 10000000B
+JNZ PREVENT_OVERLAP
+MVI A,01000001B
+OUT 80H
+IN 81H 
+ANI 01000000B
+JZ CONTINUE4
+DELAY4:
+IN 81H
+ANI 01000000B
+JNZ DELAY4
+JZ LOOP1
+CONTINUE4:
+IN 81H
+STA 2002H
+ANI 00010000B
+JZ LOOP2
+BUFFER2:
+CALL NUM_0
+IN 81H
+ANI 00010000B
+JNZ BUFFER2
+CALL OFF7SEGMENT
+MVI A,01100001B
+OUT 80H
+LOOP3:
+IN 81H
+ANI 10000000B
+JNZ PREVENT_OVERLAP
+MVI A,01100001B
+OUT 80H
+IN 81H 
+ANI 01000000B
+JZ CONTINUE5
+DELAY5:
+IN 81H
+ANI 01000000B
+JNZ DELAY5
+JZ LOOP2
+CONTINUE5:
+IN 81H
+STA 2003H
+ANI 00010000B
+JZ LOOP3
+BUFFER3:
+CALL NUM_0
+IN 81H
+ANI 00010000B
+JNZ BUFFER3
+CALL OFF7SEGMENT
+MVI A,01110001B
+OUT 80H
+LOOP4:
+IN 81H
+ANI 10000000B
+JNZ PREVENT_OVERLAP
+MVI A,01110001B
+OUT 80H
+IN 81H 
+ANI 01000000B
+JZ CONTINUE6
+DELAY6:
+IN 81H
+ANI 01000000B
+JNZ DELAY6
+JZ LOOP3
+CONTINUE6:
+IN 81H
+STA 2004H
+ANI 00010000B
+JZ LOOP4
+BUFFER4:
+CALL NUM_0
+IN 81H
+ANI 00010000B
+JNZ BUFFER4
+CALL OFF7SEGMENT
+MVI A,01111001B
+OUT 80H
+BACKSPACE1:
+IN 81H 
+ANI 01000000B
+JZ CONTINUE7
+DELAY7:
+IN 81H
+ANI 01000000B
+JNZ DELAY7
+JZ LOOP4
+CONTINUE7:
+IN 81H
+ANI 10000000B
+JNZ PREVENT_OVERLAP
+IN 81H
+ANI 00011111B
+CPI 00011110B
+JZ PREVENT_OVERLAP_1
+JNZ BACKSPACE1
+
+CHECK:							;check password 
+LDA 2008H						;load password from memo
+CMP E							;compare with temporary data in register 
+JNZ WRONG_PASSWORD
+LDA 2007H
+CMP D
+JNZ WRONG_PASSWORD
+LDA 2006H
+CMP C
+JNZ WRONG_PASSWORD
+LDA 2005H
+CMP B
+JNZ WRONG_PASSWORD
+
+CORRECT_PASSWORD:					
+MVI A,00000010B
+OUT 80H							;green led light up when input a correct password
+MVI A,005FH
+DELAY888:						;small delay for led to stay on 
+DCR A 
+JZ PASSWORD_INPUT					;jump back initial loop
+JNZ DELAY888 
+
+WRONG_PASSWORD:
+MVI A,00000100B
+OUT 80H							;red led light up when input incorrect password
+MVI A, 005FH						;small delay for led to stay on
+DELAY000:
+DCR A 
+JNZ DELAY000
+JZ PASSWORD_INPUT					;jump back initial loop
+
+PREVENT_OVERLAP:
+IN 81H
+ANI 10000000B
+JNZ PREVENT_OVERLAP
+JZ PASSWORD_INPUT
+
+DELAY777:					;delay used when test on hypertrm
+MVI H,00H
+DELAY333:
+MVI A,00FFH
+DELAY444:
+DCR A 
+JNZ DELAY444
+INR H
+MOV A,H
+CPI 03H						;consist of a nested loop for easier change of delay timing
+JNZ DELAY333
+RET						;return back to origin line 
+
+PREVENT_OVERLAP_1:				;used to check release of enter button
+IN 81H
+ANI 00011111B
+CPI 00011110B
+JZ PREVENT_OVERLAP_1
+JNZ TRANSFER_PASSWORD				
+
+PREVENT_OVERLAP_2:
+IN 81H
+ANI 00011111B
+CPI 00011110B
+JZ PREVENT_OVERLAP_2
+JNZ CHECK
+
+TRANSFER_PASSWORD:	;transfer password input to another memory to avoid original password begin replace by cancelled input
+LDA 2001H
+STA 2005H
+LDA 2002H
+STA 2006H
+LDA 2003H
+STA 2007H
+LDA 2004H
+STA 2008H
+JMP PASSWORD_INPUT
+
+BUFFER6:
+CALL NUM_0
+IN 81H
+ANI 00010000B
+JNZ BUFFER6
+RET 
+
+BUFFER7:
+CALL NUM_0
+IN 81H
+ANI 00010000B
+JNZ BUFFER7
+RET
+
+NUM_0:						;used to display number input on 7 segment display
+IN 81H
+ANI 00011111B
+CPI 00011101B					;cpi with 0 coding from decoder
+JNZ NUM_1					;if not match jump to next number
+MVI A, 00111111B				;output 0 coding in form of 7 segment display
+OUT 82H
+RET						;if true number is found and displayed, return to origin line
+NUM_1:
+ANI 00011111B
+CPI 00010000B
+JNZ NUM_2
+MVI A, 00000110B
+OUT 82H
+RET
+NUM_2:
+ANI 00011111B
+CPI 00010001B
+JNZ NUM_3
+MVI A, 01011011B
+OUT 82H
+RET
+NUM_3:
+ANI 00011111B
+CPI 00010010B
+JNZ NUM_4
+MVI A, 01001111B
+OUT 82H
+RET
+NUM_4:
+ANI 00011111B
+CPI 00010100B
+JNZ NUM_5
+MVI A, 01100110B
+OUT 82H
+RET
+NUM_5:
+ANI 00011111B
+CPI 00010101B
+JNZ NUM_6
+MVI A, 01101101B
+OUT 82H
+RET
+NUM_6:
+ANI 00011111B
+CPI 00010110B
+JNZ NUM_7
+MVI A, 01111101B
+OUT 82H
+RET
+NUM_7:
+ANI 00011111B
+CPI 00011000B
+JNZ NUM_8
+MVI A, 00000111B
+OUT 82H
+RET
+NUM_8:
+ANI 00011111B
+CPI 00011001B
+JNZ NUM_9
+MVI A, 01111111B
+OUT 82H
+RET
+NUM_9:
+ANI 00011111B
+CPI 00011010B
+JNZ RETURN
+MVI A, 01100111B
+OUT 82H
+RETURN:
+RET
+
+OFF7SEGMENT:					;off 7 segment display  
+MVI A,0H
+OUT 82H
+RET
+
+HLT 
